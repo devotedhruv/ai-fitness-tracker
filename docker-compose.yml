@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: fittrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fittrack
+      POSTGRES_PASSWORD: fittrack_password
+      POSTGRES_DB: fittrack_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - fittrack_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fittrack -d fittrack_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fittrack-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgresql://fittrack:fittrack_password@postgres:5432/fittrack_db?schema=public
+      JWT_SECRET: fittrack_super_secret_jwt_access_key_2026
+      JWT_REFRESH_SECRET: fittrack_super_secret_jwt_refresh_key_2026
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGIN: "*"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+volumes:
+  fittrack_pgdata:
+    driver: local

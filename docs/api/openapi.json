@@ -1,0 +1,1105 @@
+openapi: 3.0.3
+info:
+  title: FitTrack API
+  version: 1.0.0
+  description: Production-quality fitness application REST API with Gym, Calisthenics,
+    Run Tracking, and Offline Synchronization (Django).
+paths:
+  /api/v1/auth/forgot-password:
+    post:
+      operationId: api_v1_auth_forgot_password_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/auth/login:
+    post:
+      operationId: api_v1_auth_login_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+          description: ''
+  /api/v1/auth/logout:
+    post:
+      operationId: api_v1_auth_logout_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/auth/refresh:
+    post:
+      operationId: api_v1_auth_refresh_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefreshResponse'
+          description: ''
+  /api/v1/auth/register:
+    post:
+      operationId: api_v1_auth_register_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+          description: ''
+  /api/v1/exercises:
+    get:
+      operationId: api_v1_exercises_list
+      parameters:
+      - in: query
+        name: equipment
+        schema:
+          type: string
+        description: Filter by equipment keyword
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+      - in: query
+        name: muscleGroup
+        schema:
+          type: string
+          enum:
+          - BACK
+          - BICEPS
+          - CHEST
+          - CORE
+          - FULL_BODY
+          - GLUTES
+          - LEGS
+          - SHOULDERS
+          - TRICEPS
+        description: Filter by muscle group
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search exercise by name
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - CALISTHENICS
+          - GYM
+        description: GYM or CALISTHENICS
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exercise'
+          description: ''
+  /api/v1/exercises/{id}:
+    get:
+      operationId: api_v1_exercises_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+          description: ''
+  /api/v1/progressions:
+    get:
+      operationId: api_v1_progressions_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProgressionTree'
+          description: ''
+  /api/v1/progressions/evaluate:
+    post:
+      operationId: api_v1_progressions_evaluate_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgressionEvaluateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProgressionEvaluateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProgressionEvaluateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressionEvaluateResponse'
+          description: ''
+  /api/v1/records:
+    get:
+      operationId: api_v1_records_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonalRecord'
+          description: ''
+  /api/v1/routines:
+    get:
+      operationId: api_v1_routines_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Routine'
+          description: ''
+    post:
+      operationId: api_v1_routines_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Routine'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Routine'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Routine'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Routine'
+          description: ''
+  /api/v1/runs:
+    get:
+      operationId: api_v1_runs_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Run'
+          description: ''
+    post:
+      operationId: api_v1_runs_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Run'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Run'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Run'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+          description: ''
+  /api/v1/users/me:
+    get:
+      operationId: api_v1_users_me_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+          description: ''
+    patch:
+      operationId: api_v1_users_me_partial_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfile'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+    delete:
+      operationId: api_v1_users_me_destroy
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/workouts:
+    get:
+      operationId: api_v1_workouts_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkoutSession'
+          description: ''
+    post:
+      operationId: api_v1_workouts_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutSession'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkoutSession'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkoutSession'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutSession'
+          description: ''
+  /health:
+    get:
+      operationId: health_retrieve
+      tags:
+      - health
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+          description: ''
+components:
+  schemas:
+    Exercise:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        type:
+          $ref: '#/components/schemas/ExerciseTypeEnum'
+        primaryMuscle:
+          type: string
+        secondaryMuscles:
+          type: array
+          items: {}
+          readOnly: true
+        muscleGroups:
+          type: array
+          items: {}
+          readOnly: true
+        equipment: {}
+        instructions: {}
+        formTips:
+          type: array
+          items: {}
+          readOnly: true
+        commonMistakes:
+          type: array
+          items: {}
+          readOnly: true
+        mediaUrl:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - commonMistakes
+      - createdAt
+      - formTips
+      - id
+      - mediaUrl
+      - muscleGroups
+      - name
+      - primaryMuscle
+      - secondaryMuscles
+      - type
+      - updatedAt
+    ExerciseTypeEnum:
+      enum:
+      - GYM
+      - CALISTHENICS
+      type: string
+      description: |-
+        * `GYM` - Gym
+        * `CALISTHENICS` - Calisthenics
+    ExperienceLevelEnum:
+      enum:
+      - BEGINNER
+      - INTERMEDIATE
+      - ADVANCED
+      type: string
+      description: |-
+        * `BEGINNER` - Beginner
+        * `INTERMEDIATE` - Intermediate
+        * `ADVANCED` - Advanced
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+      - service
+      - status
+      - timestamp
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - password
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+      - message
+    PatchedUserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        displayName:
+          type: string
+        units:
+          $ref: '#/components/schemas/UnitsEnum'
+        experienceLevel:
+          type: string
+        fitnessGoal:
+          type: string
+          nullable: true
+        daysPerWeek:
+          type: integer
+        equipment: {}
+    PersonalRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        exercise_id:
+          type: string
+          format: uuid
+          readOnly: true
+        exerciseName:
+          type: string
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/PersonalRecordTypeEnum'
+        value:
+          type: number
+          format: double
+        previous_value:
+          type: number
+          format: double
+          nullable: true
+        achievedAt:
+          type: string
+          format: date-time
+        session_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - achievedAt
+      - exerciseName
+      - exercise_id
+      - id
+      - type
+      - value
+    PersonalRecordTypeEnum:
+      enum:
+      - MAX_WEIGHT
+      - MAX_REPS
+      - MAX_VOLUME
+      - ESTIMATED_1RM
+      type: string
+      description: |-
+        * `MAX_WEIGHT` - Max Weight
+        * `MAX_REPS` - Max Reps
+        * `MAX_VOLUME` - Max Volume
+        * `ESTIMATED_1RM` - Estimated 1RM
+    ProgressionEvaluateRequest:
+      type: object
+      properties:
+        skill:
+          $ref: '#/components/schemas/SkillEnum'
+      required:
+      - skill
+    ProgressionEvaluateResponse:
+      type: object
+      properties:
+        unlocked:
+          type: boolean
+        currentLevel:
+          type: integer
+        previousLevel:
+          type: integer
+        newLevel:
+          type: integer
+        required:
+          type: string
+        loggedQualifyingSets:
+          type: integer
+        message:
+          type: string
+      required:
+      - message
+      - unlocked
+    ProgressionNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        level:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        skill:
+          $ref: '#/components/schemas/SkillEnum'
+        exerciseId:
+          type: string
+          format: uuid
+        exerciseName:
+          type: string
+        primaryMuscle:
+          type: string
+        unlockCriteria:
+          type: string
+        targetSets:
+          type: integer
+        targetReps:
+          type: integer
+        targetHoldSec:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          readOnly: true
+      required:
+      - exerciseId
+      - exerciseName
+      - id
+      - level
+      - primaryMuscle
+      - skill
+      - status
+      - targetHoldSec
+      - targetReps
+      - targetSets
+      - unlockCriteria
+    ProgressionTree:
+      type: object
+      properties:
+        skill:
+          type: string
+        currentLevel:
+          type: integer
+        totalLevels:
+          type: integer
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgressionNode'
+      required:
+      - currentLevel
+      - nodes
+      - skill
+      - totalLevels
+    Register:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        displayName:
+          type: string
+          default: Athlete
+          minLength: 2
+        units:
+          allOf:
+          - $ref: '#/components/schemas/UnitsEnum'
+          default: METRIC
+        experienceLevel:
+          allOf:
+          - $ref: '#/components/schemas/ExperienceLevelEnum'
+          default: BEGINNER
+        fitnessGoal:
+          type: string
+        daysPerWeek:
+          type: integer
+          maximum: 7
+          minimum: 1
+          default: 3
+        equipment:
+          type: array
+          items:
+            type: string
+      required:
+      - email
+      - password
+    Routine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        is_public:
+          type: boolean
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutineExercise'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - createdAt
+      - id
+      - name
+    RoutineExercise:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        exercise:
+          allOf:
+          - $ref: '#/components/schemas/Exercise'
+          readOnly: true
+        exerciseId:
+          type: string
+          format: uuid
+          writeOnly: true
+        order_index:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        supersetGroupId:
+          type: string
+          nullable: true
+        targetSets:
+          type: integer
+          default: 3
+        targetReps:
+          type: integer
+          default: 10
+        targetRestSec:
+          type: integer
+          default: 90
+        notes:
+          type: string
+          nullable: true
+      required:
+      - exercise
+      - exerciseId
+      - id
+    Run:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        distanceMeters:
+          type: number
+          format: double
+        durationSeconds:
+          type: integer
+        avgPaceSecKm:
+          type: integer
+        elevationGainMeters:
+          type: number
+          format: double
+          default: 0.0
+        caloriesBurned:
+          type: integer
+          nullable: true
+        polyline:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+        splits:
+          type: array
+          items:
+            $ref: '#/components/schemas/RunSplit'
+      required:
+      - avgPaceSecKm
+      - completedAt
+      - distanceMeters
+      - durationSeconds
+      - id
+      - startedAt
+    RunSplit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        splitNumber:
+          type: integer
+        distanceMeters:
+          type: number
+          format: double
+        durationSeconds:
+          type: integer
+        paceSecKm:
+          type: integer
+        elevationChange:
+          type: number
+          format: double
+      required:
+      - distanceMeters
+      - durationSeconds
+      - elevationChange
+      - id
+      - paceSecKm
+      - splitNumber
+    SkillEnum:
+      enum:
+      - PUSH
+      - PULL
+      - LEGS
+      - CORE
+      - HANDSTAND
+      type: string
+      description: |-
+        * `PUSH` - Push
+        * `PULL` - Pull
+        * `LEGS` - Legs
+        * `CORE` - Core
+        * `HANDSTAND` - Handstand
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required:
+      - refreshToken
+    TokenRefreshResponse:
+      type: object
+      properties:
+        tokens:
+          $ref: '#/components/schemas/TokensPayload'
+      required:
+      - tokens
+    TokensPayload:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+      required:
+      - accessToken
+      - expiresIn
+      - refreshToken
+    UnitsEnum:
+      enum:
+      - METRIC
+      - IMPERIAL
+      type: string
+      description: |-
+        * `METRIC` - Metric
+        * `IMPERIAL` - Imperial
+    UserDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/UserProfile'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - id
+      - profile
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        displayName:
+          type: string
+        units:
+          $ref: '#/components/schemas/UnitsEnum'
+        experienceLevel:
+          type: string
+        fitnessGoal:
+          type: string
+          nullable: true
+        daysPerWeek:
+          type: integer
+        equipment: {}
+      required:
+      - id
+    WorkoutSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        routineId:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          maxLength: 200
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+        durationSeconds:
+          type: integer
+          default: 0
+        totalVolumeKg:
+          type: number
+          format: double
+          default: 0.0
+        notes:
+          type: string
+          nullable: true
+        is_completed:
+          type: boolean
+        sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutSet'
+      required:
+      - id
+      - startTime
+    WorkoutSet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        exerciseId:
+          type: string
+          format: uuid
+        set_number:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        weightKg:
+          type: number
+          format: double
+          default: 0.0
+        reps:
+          type: integer
+          default: 0
+        holdDurationSec:
+          type: integer
+          nullable: true
+        isCompleted:
+          type: boolean
+          default: true
+        isWarmup:
+          type: boolean
+          default: false
+        rpe:
+          type: number
+          format: double
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - exerciseId
+      - id
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
