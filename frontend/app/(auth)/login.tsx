@@ -14,8 +14,8 @@ import { Input } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { Icon } from '../../src/components/Icon';
-import { authApi } from '../../src/services/api';
-import { useAuthStore } from '../../src/stores/authStore';
+import { authApi, getApiBaseUrl, setCustomApiUrl, testApiConnection } from '../../src/services/api';
+import { useAuthStore, DEFAULT_USER } from '../../src/stores/authStore';
 import { AppLogo } from '../../src/components/ui/AppLogo';
 
 export default function LoginScreen() {
@@ -27,14 +27,54 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNetworkError, setIsNetworkError] = useState(false);
+
+  // Server Diagnostics & Config
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [serverUrl, setServerUrl] = useState(getApiBaseUrl());
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
+
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    setConnectionStatus(null);
+    try {
+      const res = await testApiConnection(serverUrl);
+      if (res.ok) {
+        setConnectionStatus('✅ Server Connected (200 OK)');
+      } else {
+        setConnectionStatus(`❌ Connection Failed: ${res.error || 'Unreachable'}`);
+      }
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleApplyServerUrl = () => {
+    setCustomApiUrl(serverUrl);
+    setConnectionStatus('✅ Saved API URL');
+    setError(null);
+    setIsNetworkError(false);
+  };
+
+  const handleDirectDemoMode = () => {
+    setSession(DEFAULT_USER, {
+      accessToken: 'demo-local-access-token',
+      refreshToken: 'demo-local-refresh-token',
+      expiresIn: 86400,
+    });
+    router.replace('/(tabs)/today');
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Please provide your email and password');
+      setIsNetworkError(false);
       return;
     }
 
     setError(null);
+    setIsNetworkError(false);
     setLoading(true);
     try {
       const data = await authApi.login({ email, password });
@@ -46,16 +86,37 @@ export default function LoginScreen() {
         router.replace('/(tabs)/today');
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      const msg = err.message || 'Login failed';
+      setError(msg);
+      if (
+        msg.toLowerCase().includes('network') ||
+        msg.toLowerCase().includes('fetch') ||
+        msg.toLowerCase().includes('failed')
+      ) {
+        setIsNetworkError(true);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoFill = () => {
+  const handleDemoFillAndLogin = async () => {
     setEmail('demo@fittrack.app');
     setPassword('Password123!');
     setError(null);
+    setIsNetworkError(false);
+    setLoading(true);
+
+    try {
+      const data = await authApi.login({ email: 'demo@fittrack.app', password: 'Password123!' });
+      setSession(data.user, data.tokens);
+      router.replace('/(tabs)/today');
+    } catch {
+      // Graceful offline fallback: if server is unreachable, immediately enter demo session
+      handleDirectDemoMode();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -89,6 +150,27 @@ export default function LoginScreen() {
                 ]}
               >
                 <Text style={[typography.captionBold, { color: colors.error }]}>{error}</Text>
+                {isNetworkError && (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: 8 }]}>
+                      Cannot reach server at {getApiBaseUrl()}. Make sure your backend is running (`runserver 0.0.0.0:4000`) and phone is on the same Wi-Fi.
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      <Button
+                        title="Enter in Offline Demo Mode"
+                        onPress={handleDirectDemoMode}
+                        variant="primary"
+                        size="small"
+                      />
+                      <Button
+                        title="Edit Server IP"
+                        onPress={() => setShowServerConfig(true)}
+                        variant="secondary"
+                        size="small"
+                      />
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
@@ -101,6 +183,7 @@ export default function LoginScreen() {
               onChangeText={(t) => {
                 setEmail(t);
                 setError(null);
+                setIsNetworkError(false);
               }}
             />
 
@@ -112,6 +195,7 @@ export default function LoginScreen() {
               onChangeText={(t) => {
                 setPassword(t);
                 setError(null);
+                setIsNetworkError(false);
               }}
             />
 
@@ -124,16 +208,71 @@ export default function LoginScreen() {
               />
             </View>
 
-            <View style={{ marginTop: spacing.sm }}>
+            <View style={{ marginTop: spacing.sm, gap: spacing.xs }}>
               <Button
-                title="Quick Demo Login"
-                onPress={handleDemoFill}
+                title="Quick Demo Login (Auto-Fallback)"
+                onPress={handleDemoFillAndLogin}
                 variant="secondary"
                 size="small"
                 leftIcon={<Icon name="today" size={15} color={colors.textPrimary} />}
               />
+              <Button
+                title="Explore in Demo Mode (Offline)"
+                onPress={handleDirectDemoMode}
+                variant="ghost"
+                size="small"
+                leftIcon={<Icon name="dumbbell" size={15} color={colors.accent} />}
+              />
             </View>
           </Card>
+
+          {/* Server Connection Config Collapsible */}
+          <View style={{ marginBottom: spacing.md }}>
+            <Button
+              title={showServerConfig ? 'Hide Server Configuration' : 'Server Connection Settings'}
+              onPress={() => setShowServerConfig(!showServerConfig)}
+              variant="ghost"
+              size="small"
+              leftIcon={<Icon name="gear" size={14} color={colors.textSecondary} />}
+            />
+            {showServerConfig && (
+              <Card style={{ marginTop: 8, padding: spacing.md }}>
+                <Text style={[typography.captionBold, { color: colors.textPrimary, marginBottom: 4 }]}>
+                  BACKEND API URL
+                </Text>
+                <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: 8 }]}>
+                  Default: Public Cloudflare HTTPS Tunnel or host LAN IP.
+                </Text>
+                <Input
+                  label="API BASE URL"
+                  value={serverUrl}
+                  onChangeText={setServerUrl}
+                  autoCapitalize="none"
+                  placeholder="https://court-advisors-freelance-mobility.trycloudflare.com/api/v1"
+                />
+                {connectionStatus && (
+                  <Text style={[typography.caption, { color: colors.accent, marginVertical: 4 }]}>
+                    {connectionStatus}
+                  </Text>
+                )}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <Button
+                    title="Test Connection"
+                    onPress={handleTestConnection}
+                    loading={testingConnection}
+                    variant="secondary"
+                    size="small"
+                  />
+                  <Button
+                    title="Apply URL"
+                    onPress={handleApplyServerUrl}
+                    variant="primary"
+                    size="small"
+                  />
+                </View>
+              </Card>
+            )}
+          </View>
 
           {/* Navigation Links */}
           <View style={styles.footerLinks}>

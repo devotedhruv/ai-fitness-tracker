@@ -76,16 +76,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fittrack.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'fittrack_db'),
-        'USER': os.getenv('DB_USER', 'fittrack'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'fittrack_password'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+database_url = os.getenv('DATABASE_URL')
+if database_url and not os.getenv('USE_LOCAL_DB'):
+    from urllib.parse import urlparse
+    db_url_parsed = urlparse(database_url)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db_url_parsed.path.lstrip('/'),
+            'USER': db_url_parsed.username,
+            'PASSWORD': db_url_parsed.password,
+            'HOST': db_url_parsed.hostname,
+            'PORT': str(db_url_parsed.port or 5432),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'fittrack_db'),
+            'USER': os.getenv('DB_USER', 'fittrack'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'fittrack_password'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},

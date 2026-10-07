@@ -45,8 +45,8 @@ export function AppLogo({
           style,
         ]}
       >
-        <Text style={[styles.markLetter, { fontSize: scale.markFont, color: colors.textPrimary }]}>
-          B
+        <Text style={[styles.markLetter, { fontSize: scale.markFont * 0.85, color: colors.textPrimary }]}>
+          AI
         </Text>
         <View style={[styles.markAccentDot, { backgroundColor: colors.accent }]} />
       </View>
@@ -54,7 +54,7 @@ export function AppLogo({
 
     if (onPress) {
       return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityLabel="BALYRA Home">
+        <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityLabel="AI Fitness Tracker Home">
           {markContent}
         </TouchableOpacity>
       );
@@ -62,7 +62,7 @@ export function AppLogo({
     return markContent;
   }
 
-  // Full Wordmark variant: BAL + YRA + | + Tagline
+  // Full Wordmark variant: AI FITNESS TRACKER
   const content = (
     <View style={[styles.container, style]}>
       <View style={styles.titleRow}>
@@ -76,7 +76,7 @@ export function AppLogo({
             },
           ]}
         >
-          BAL<Text style={{ color: colors.accent }}>YRA</Text>
+          AI <Text style={{ color: colors.accent }}>FITNESS</Text> TRACKER
         </Text>
         {showDivider && (
           <Text
@@ -113,7 +113,7 @@ export function AppLogo({
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityLabel="BALYRA Home">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityLabel="AI Fitness Tracker Home">
         {content}
       </TouchableOpacity>
     );

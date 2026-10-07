@@ -119,7 +119,7 @@ export function PublicProfileModal({
             {/* Banner Cover */}
             <View style={styles.bannerCover}>
               <View style={styles.bannerWatermark}>
-                <Text style={styles.watermarkText}>BALYRA • TAPAS</Text>
+                <Text style={styles.watermarkText}>AI FITNESS • TAPAS</Text>
               </View>
             </View>
 
@@ -336,7 +336,7 @@ export function PublicProfileModal({
             {activeTab === 'ACHIEVEMENTS' && (
               <View style={styles.tabContent}>
                 <View style={styles.achievementsCard}>
-                  <Text style={styles.disciplineHeading}>BALYRA DISCIPLINE PILLARS</Text>
+                  <Text style={styles.disciplineHeading}>AI FITNESS DISCIPLINE PILLARS</Text>
                   <View style={styles.pillarItem}>
                     <Text style={styles.pillarIcon}>🔥</Text>
                     <View style={{ flex: 1 }}>

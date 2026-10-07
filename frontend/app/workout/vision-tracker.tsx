@@ -82,17 +82,6 @@ export default function VisionTrackerScreen() {
   // Calculate topOffset so RepCounterHUD sits cleanly below topHeader with a comfortable margin
   const calculatedTopOffset = insets.top + (Platform.OS === 'web' ? 70 : 66);
 
-  if (Platform.OS !== 'web') {
-    return (
-      <AppUnderConstruction
-        title="AI FORM DETECTION"
-        featureName="Real-Time AI Vision"
-        description={`Real-time computer vision for ${currentDisplayName} is optimized for web browser acceleration.\n\nOn-device native Android neural acceleration (MediaPipe / TFLite) is currently in active development for the v1.1 release.`}
-        icon="camera"
-        onBack={() => router.back()}
-      />
-    );
-  }
 
   return (
     <View style={styles.container}>

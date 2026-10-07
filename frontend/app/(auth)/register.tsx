@@ -13,8 +13,8 @@ import { useTheme } from '../../src/tokens/ThemeContext';
 import { Input } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
-import { authApi } from '../../src/services/api';
-import { useAuthStore } from '../../src/stores/authStore';
+import { authApi, getApiBaseUrl } from '../../src/services/api';
+import { useAuthStore, DEFAULT_USER } from '../../src/stores/authStore';
 import { AppLogo } from '../../src/components/ui/AppLogo';
 
 export default function RegisterScreen() {
@@ -28,24 +28,38 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNetworkError, setIsNetworkError] = useState(false);
+
+  const handleDirectDemoMode = () => {
+    setSession(DEFAULT_USER, {
+      accessToken: 'demo-local-access-token',
+      refreshToken: 'demo-local-refresh-token',
+      expiresIn: 86400,
+    });
+    router.replace('/(tabs)/today');
+  };
 
   const handleRegister = async () => {
     if (!displayName || !email || !password) {
       setError('Please fill out all required fields');
+      setIsNetworkError(false);
       return;
     }
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters long');
+      setIsNetworkError(false);
       return;
     }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      setIsNetworkError(false);
       return;
     }
 
     setError(null);
+    setIsNetworkError(false);
     setLoading(true);
     try {
       const data = await authApi.register({
@@ -56,7 +70,15 @@ export default function RegisterScreen() {
       setSession(data.user, data.tokens);
       router.replace('/(auth)/onboarding');
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      const msg = err.message || 'Registration failed';
+      setError(msg);
+      if (
+        msg.toLowerCase().includes('network') ||
+        msg.toLowerCase().includes('fetch') ||
+        msg.toLowerCase().includes('failed')
+      ) {
+        setIsNetworkError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -91,6 +113,19 @@ export default function RegisterScreen() {
                 ]}
               >
                 <Text style={[typography.captionBold, { color: colors.error }]}>{error}</Text>
+                {isNetworkError && (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: 8 }]}>
+                      Cannot reach server at {getApiBaseUrl()}. Make sure your PC is running the backend and phone is on the same Wi-Fi, or explore the app immediately in Demo Mode.
+                    </Text>
+                    <Button
+                      title="Explore in Offline Demo Mode"
+                      onPress={handleDirectDemoMode}
+                      variant="primary"
+                      size="small"
+                    />
+                  </View>
+                )}
               </View>
             )}
 

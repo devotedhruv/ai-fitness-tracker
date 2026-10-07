@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "BALYRA",
+    "name": "AI Fitness Tracker",
     "slug": "balyra",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,8 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.balyra.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "BALYRA requires your location to map your outdoor runs and record pace.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "BALYRA requires background location to track your route while your screen is locked.",
+        "NSLocationWhenInUseUsageDescription": "AI Fitness Tracker requires your location to map your outdoor runs and record pace.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "AI Fitness Tracker requires background location to track your route while your screen is locked.",
         "UIBackgroundModes": [
           "location"
         ]
@@ -47,7 +47,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "BALYRA needs continuous location access to accurately track your runs and split times."
+          "locationAlwaysAndWhenInUsePermission": "AI Fitness Tracker needs continuous location access to accurately track your runs and split times."
         }
       ],
       "expo-video"

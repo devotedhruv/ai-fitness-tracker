@@ -1,6 +1,33 @@
 import { useAuthStore } from '../stores/authStore';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+let customApiBaseUrl: string | null = null;
+
+export const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://court-advisors-freelance-mobility.trycloudflare.com/api/v1';
+
+export function getApiBaseUrl(): string {
+  return customApiBaseUrl || DEFAULT_API_URL;
+}
+
+export function setCustomApiUrl(url: string | null): void {
+  customApiBaseUrl = url?.trim() ? url.trim() : null;
+}
+
+export async function testApiConnection(baseUrl?: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+  const base = (baseUrl || getApiBaseUrl()).replace(/\/api\/v1\/?$/, '');
+  const url = `${base}/health`;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      return { ok: true, status: res.status };
+    }
+    return { ok: false, status: res.status, error: `HTTP ${res.status}` };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Connection timed out or refused' };
+  }
+}
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
@@ -8,7 +35,7 @@ interface RequestOptions extends RequestInit {
 
 export async function apiRequest<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { requiresAuth = true, headers = {}, body, ...rest } = options;
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${getApiBaseUrl()}${endpoint}`;
 
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
@@ -35,7 +62,7 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
     const currentTokens = useAuthStore.getState().tokens;
     if (currentTokens?.refreshToken) {
       try {
-        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+        const refreshRes = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken: currentTokens.refreshToken }),

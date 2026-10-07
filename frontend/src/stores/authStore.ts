@@ -33,9 +33,9 @@ export interface AuthTokens {
 
 export const DEFAULT_USER: User = {
   id: 'user-demo-athlete',
-  email: 'athlete@balyra.app',
+  email: 'athlete@aifitnesstracker.app',
   profile: {
-    displayName: 'BALYRA Athlete',
+    displayName: 'AI Fitness Athlete',
     username: 'athlete',
     avatarUrl: 'preset:athlete',
     bio: 'Build. Move. Become.',

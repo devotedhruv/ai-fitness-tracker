@@ -139,7 +139,7 @@ export default function SocialFeedScreen() {
       <View style={[styles.bannerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.bannerTextWrap}>
           <Text style={[styles.bannerTitle, { color: colors.accent }]}>
-            BALYRA SQUAD • BUILD. MOVE. BECOME.
+            AI FITNESS SQUAD • BUILD. MOVE. BECOME.
           </Text>
           <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>
             Cheer on daily victories, share lifting PRs, and connect with fellow athletes.

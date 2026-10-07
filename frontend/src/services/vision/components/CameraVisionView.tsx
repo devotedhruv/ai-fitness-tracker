@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { PoseTracker } from '../PoseTracker';
-import { FrameAnalysisResult, Landmark3D, POSE_CONNECTIONS, PoseLandmark } from '../types';
+import { FrameAnalysisResult, Landmark3D, PoseLandmark } from '../types';
 import { RepCounterHUD } from './RepCounterHUD';
 import { FormCorrectionBanner } from './FormCorrectionBanner';
 import { audioCoach } from '../audioCoach';
@@ -20,10 +21,17 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [showJointDots, setShowJointDots] = useState<boolean>(false);
+  const showJointDotsRef = useRef<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [isMuted, setIsMuted] = useState<boolean>(false);
+
+  useEffect(() => {
+    showJointDotsRef.current = showJointDots;
+  }, [showJointDots]);
   const [analysisResult, setAnalysisResult] = useState<FrameAnalysisResult>(() => ({
     state: poseTracker.getState(),
     repCompleted: false,
@@ -134,8 +142,8 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
             // Pass to biomechanics analyzer
             const analysis = poseTracker.onNewFrame(rawLandmarks);
 
-            // Draw Skeleton onto canvas
-            drawSkeleton(ctx, canvas.width, canvas.height, rawLandmarks, analysis);
+            // Draw clean overlay without lines
+            drawSkeleton(ctx, canvas.width, canvas.height, rawLandmarks, analysis, showJointDotsRef.current);
           }
         });
 
@@ -188,6 +196,16 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Native Camera View */}
+      {Platform.OS !== 'web' && permission?.granted && (
+        <View style={styles.cameraWrapper}>
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            facing={facingMode === 'user' ? 'front' : 'back'}
+          />
+        </View>
+      )}
+
       {/* Web Video & Canvas elements */}
       {Platform.OS === 'web' && (
         <View style={styles.cameraWrapper}>
@@ -225,8 +243,23 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
       {isLoading && (
         <View style={styles.overlayCenter}>
           <ActivityIndicator size="large" color="#B8F500" />
-          <Text style={styles.loadingText}>Initializing MediaPipe Vision Model...</Text>
+          <Text style={styles.loadingText}>Initializing Vision Model...</Text>
           <Text style={styles.loadingSub}>Position yourself fully in camera frame</Text>
+        </View>
+      )}
+
+      {/* Camera Permission Request for Native */}
+      {Platform.OS !== 'web' && permission && !permission.granted && (
+        <View style={styles.overlayCenter}>
+          <Icon name="camera" size={44} color="#B8F500" />
+          <Text style={styles.loadingText}>Camera Access Required</Text>
+          <Text style={styles.loadingSub}>Enable camera access to track your exercise workout.</Text>
+          <TouchableOpacity
+            style={[styles.finishButton, { marginTop: 16, paddingHorizontal: 24 }]}
+            onPress={requestPermission}
+          >
+            <Text style={styles.finishButtonText}>GRANT PERMISSION</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -258,7 +291,18 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.iconButton} onPress={toggleMute} accessibilityLabel="Toggle Voice Coach">
           <Icon name={isMuted ? 'volume-mute' : 'volume'} size={20} color="#FFFFFF" />
-          <Text style={styles.iconButtonLabel}>{isMuted ? 'Muted' : 'Voice On'}</Text>
+          <Text style={styles.iconButtonLabel}>{isMuted ? 'Muted' : 'Voice'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => setShowJointDots((prev) => !prev)}
+          accessibilityLabel="Toggle Camera Overlay"
+        >
+          <Icon name="sparkle" size={20} color={showJointDots ? '#B8F500' : '#8E8E93'} />
+          <Text style={[styles.iconButtonLabel, showJointDots && { color: '#B8F500' }]}>
+            {showJointDots ? 'Dots On' : 'Clean'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -279,43 +323,24 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
 };
 
 /**
- * Draws the high-visibility color-coded skeleton directly on the 2D canvas.
+ * Draws minimal landmark points or keeps canvas clean without any distracting lines during movement.
+ * Completely eliminates wireframe skeleton bone lines, bar path trajectory lines, reference lines,
+ * and sparklines so the user has an unobstructed view while moving.
  */
 function drawSkeleton(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   landmarks: Landmark3D[],
-  analysis: FrameAnalysisResult
+  analysis: FrameAnalysisResult,
+  showJointDots: boolean = false
 ) {
-  // Suppress hallucinated offscreen skeleton when body is not in frame
+  // If dots are disabled (clean mode), keep canvas completely clear - zero lines or dots
+  if (!showJointDots) return;
+
   const minVisibility = analysis.state.currentState === 'NOT_IN_FRAME' ? 0.6 : 0.45;
 
-  // 1. Draw Bones (Connections)
-  for (const [fromIdx, toIdx] of POSE_CONNECTIONS) {
-    const from = landmarks[fromIdx];
-    const to = landmarks[toIdx];
-
-    if (!from || !to) continue;
-    if ((from.visibility ?? 1) < minVisibility || (to.visibility ?? 1) < minVisibility) continue;
-
-    // Check if either connected joint has a fault
-    const fromColor = analysis.skeletonJointColors[fromIdx];
-    const toColor = analysis.skeletonJointColors[toIdx];
-    const boneColor = fromColor === '#FF3B30' || toColor === '#FF3B30'
-      ? '#FF3B30'
-      : analysis.skeletonBoneColors[`${fromIdx}-${toIdx}`] || '#34C759';
-
-    ctx.beginPath();
-    ctx.moveTo(from.x * width, from.y * height);
-    ctx.lineTo(to.x * width, to.y * height);
-    ctx.lineWidth = boneColor === '#FF3B30' ? 6 : 4;
-    ctx.strokeStyle = boneColor;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  }
-
-  // 2. Draw Joint Keypoints
+  // Draw Subtle, Non-Intrusive Joint Dots (NO connecting bone lines, NO bar path lines, NO reference lines)
   for (let i = 0; i < landmarks.length; i++) {
     const lm = landmarks[i];
     if (!lm || (lm.visibility ?? 1) < minVisibility) continue;
@@ -326,143 +351,13 @@ function drawSkeleton(
     const jointColor = analysis.skeletonJointColors[i] || '#34C759';
     const isFaulted = jointColor === '#FF3B30';
 
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(lm.x * width, lm.y * height, isFaulted ? 8 : 6, 0, 2 * Math.PI);
+    ctx.arc(lm.x * width, lm.y * height, isFaulted ? 6 : 4, 0, 2 * Math.PI);
     ctx.fillStyle = jointColor;
+    ctx.shadowColor = jointColor;
+    ctx.shadowBlur = isFaulted ? 8 : 4;
     ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.stroke();
-  }
-
-  // 3. Draw Bar Path Trajectory (VBT / Barbell velocity tracker)
-  const barPath = analysis.barPath || [];
-  if (barPath.length > 1) {
-    ctx.save();
-    ctx.beginPath();
-    for (let i = 0; i < barPath.length; i++) {
-      const pt = barPath[i];
-      const px = pt.x * width;
-      const py = pt.y * height;
-      if (i === 0) {
-        ctx.moveTo(px, py);
-      } else {
-        ctx.lineTo(px, py);
-      }
-    }
-    ctx.strokeStyle = '#00F0FF';
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.setLineDash([4, 2]);
-    ctx.stroke();
-
-    // Draw active barbell/tracker point
-    const lastPoint = barPath[barPath.length - 1];
-    ctx.beginPath();
-    ctx.arc(lastPoint.x * width, lastPoint.y * height, 7, 0, 2 * Math.PI);
-    ctx.fillStyle = '#00F0FF';
-    ctx.fill();
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // 4. Draw Pull-up Bar / Depth Reference Line (YOLO26-style)
-  const refY = analysis.referenceLineY ?? analysis.state.referenceLineY;
-  if (refY !== undefined && refY > 0.05 && refY < 0.95 && analysis.state.currentState !== 'NOT_IN_FRAME') {
-    const isAbove = analysis.isAboveReferenceLine ?? analysis.state.isAboveReferenceLine ?? false;
-    const label = analysis.referenceLineLabel || analysis.state.referenceLineLabel || 'REFERENCE LINE';
-    const distCm = analysis.distanceToReferenceLineCm ?? analysis.state.distanceToReferenceLineCm;
-    const yPixel = refY * height;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(0, yPixel);
-    ctx.lineTo(width, yPixel);
-
-    if (isAbove) {
-      ctx.strokeStyle = '#34C759';
-      ctx.lineWidth = 3.5;
-      ctx.shadowColor = '#34C759';
-      ctx.shadowBlur = 14;
-      ctx.setLineDash([]);
-    } else {
-      ctx.strokeStyle = '#00F0FF';
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#00F0FF';
-      ctx.shadowBlur = 8;
-      ctx.setLineDash([12, 6]);
-    }
-    ctx.stroke();
-
-    // Draw reference badge tag
-    const badgeText = `${label} ${distCm !== undefined ? `(${distCm >= 0 ? `+${distCm}` : distCm}cm)` : ''}`;
-    ctx.font = 'bold 12px sans-serif';
-    const textWidth = ctx.measureText(badgeText).width;
-    const badgeX = 20;
-    const badgeY = Math.max(24, yPixel - 12);
-
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.85)';
-    ctx.strokeStyle = isAbove ? '#34C759' : '#00F0FF';
-    ctx.lineWidth = 1.5;
-    ctx.shadowBlur = 0;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    if (typeof (ctx as any).roundRect === 'function') {
-      (ctx as any).roundRect(badgeX - 8, badgeY - 14, textWidth + 16, 22, 6);
-    } else {
-      ctx.rect(badgeX - 8, badgeY - 14, textWidth + 16, 22);
-    }
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = isAbove ? '#34C759' : '#00F0FF';
-    ctx.fillText(badgeText, badgeX, badgeY + 2);
-    ctx.restore();
-  }
-
-  // 5. Draw Head / Primary Joint Trajectory Sparkline
-  const trajectory = analysis.trajectoryHistory || analysis.state.trajectoryHistory || [];
-  if (trajectory.length > 3 && analysis.state.currentState !== 'NOT_IN_FRAME') {
-    ctx.save();
-    const graphWidth = Math.min(160, width * 0.25);
-    const graphRight = width - 20;
-    const graphLeft = graphRight - graphWidth;
-
-    ctx.beginPath();
-    for (let i = 0; i < trajectory.length; i++) {
-      const pt = trajectory[i];
-      const gx = graphLeft + (i / (trajectory.length - 1)) * graphWidth;
-      const gy = pt.y * height;
-      if (i === 0) {
-        ctx.moveTo(gx, gy);
-      } else {
-        ctx.lineTo(gx, gy);
-      }
-    }
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.65)';
-    ctx.lineWidth = 2.5;
-    ctx.shadowColor = '#00F0FF';
-    ctx.shadowBlur = 6;
-    ctx.setLineDash([]);
-    ctx.stroke();
-
-    // Mark peaks
-    for (let i = 0; i < trajectory.length; i++) {
-      const pt = trajectory[i];
-      if (pt.isPeak) {
-        const gx = graphLeft + (i / (trajectory.length - 1)) * graphWidth;
-        const gy = pt.y * height;
-        ctx.beginPath();
-        ctx.arc(gx, gy, 4, 0, 2 * Math.PI);
-        ctx.fillStyle = '#34C759';
-        ctx.shadowColor = '#34C759';
-        ctx.shadowBlur = 8;
-        ctx.fill();
-      }
-    }
     ctx.restore();
   }
 }

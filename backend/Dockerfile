@@ -1,31 +1,23 @@
-FROM node:20-alpine AS builder
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY package*.json ./
-COPY tsconfig.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN npm ci
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY prisma ./prisma
-RUN npx prisma generate
+COPY . /app/
 
-COPY src ./src
-RUN npm run build
-
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+RUN python manage.py collectstatic --noinput || true
 
 EXPOSE 4000
-ENV NODE_ENV=production
 
-CMD ["node", "dist/index.js"]
+CMD ["gunicorn", "fittrack.wsgi:application", "--bind", "0.0.0.0:4000", "--workers", "2", "--timeout", "120"]

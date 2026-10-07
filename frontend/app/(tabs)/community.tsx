@@ -387,7 +387,7 @@ export default function CommunityScreen() {
         <ScrollView style={styles.tabScrollView} showsVerticalScrollIndicator={false}>
           {/* Academy Banner */}
           <View style={styles.academyBanner}>
-            <Text style={styles.academyTitle}>BALYRA ACADEMY • OPEN SCIENCE & GUIDES</Text>
+            <Text style={styles.academyTitle}>AI FITNESS ACADEMY • OPEN SCIENCE & GUIDES</Text>
             <Text style={styles.academySubtitle}>
               Evidence-based exercise science, biomechanics masterclasses, and nutrition blogs.
             </Text>

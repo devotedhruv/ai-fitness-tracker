@@ -28,6 +28,11 @@ __pycache__/
 *$py.class
 *.sqlite3
 
+# Temporary doc previews
+docs/latex_preview_*
+docs/v2_*
+
 # OS files
 .DS_Store
 Thumbs.db
+.~lock*

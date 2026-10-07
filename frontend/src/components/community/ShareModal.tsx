@@ -123,7 +123,7 @@ export function ShareModal({ visible, post, onClose }: ShareModalProps) {
 
           {/* Slogan */}
           <View style={styles.sloganFooter}>
-            <Text style={styles.sloganText}>BALYRA • BUILD. MOVE. BECOME.</Text>
+            <Text style={styles.sloganText}>AI FITNESS TRACKER • BUILD. MOVE. BECOME.</Text>
           </View>
         </SafeAreaView>
       </View>
