@@ -90,6 +90,14 @@ if database_url and not os.getenv('USE_LOCAL_DB'):
             'PORT': str(db_url_parsed.port or 5432),
         }
     }
+elif os.getenv('RENDER') or os.getenv('USE_SQLITE'):
+    # On cloud platforms without external DB URL, use standalone SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
 else:
     DATABASES = {
         'default': {
