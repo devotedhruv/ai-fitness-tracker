@@ -6,8 +6,8 @@ export class SquatAnalyzer extends BaseAnalyzer {
   private hasReachedValidDepth: boolean = false;
 
   constructor() {
-    // Target Inflection <= 95 deg, Target Lockout >= 160 deg
-    super('squat', 'Bodyweight / Barbell Squat', 95, 160);
+    // Target Inflection <= 100 deg, Target Lockout >= 150 deg
+    super('squat', 'Bodyweight / Barbell Squat', 100, 150);
   }
 
   public processFrame(landmarks: Landmark3D[], timestampMs: number): FrameAnalysisResult {
@@ -28,16 +28,16 @@ export class SquatAnalyzer extends BaseAnalyzer {
     const leftShoulder = landmarks[PoseLandmark.LEFT_SHOULDER];
     const rightShoulder = landmarks[PoseLandmark.RIGHT_SHOULDER];
 
-    // Require lower body landmarks to be clearly visible in frame
+    // Require lower body landmarks to be visible in frame
     const leftLegVisible =
-      (leftHip?.visibility ?? 0) >= 0.55 &&
-      (leftKnee?.visibility ?? 0) >= 0.55 &&
-      (leftAnkle?.visibility ?? 0) >= 0.40;
+      (leftHip?.visibility ?? 0) >= 0.40 &&
+      (leftKnee?.visibility ?? 0) >= 0.40 &&
+      ((leftAnkle?.visibility ?? 0) >= 0.25 || (leftHip && leftKnee));
 
     const rightLegVisible =
-      (rightHip?.visibility ?? 0) >= 0.55 &&
-      (rightKnee?.visibility ?? 0) >= 0.55 &&
-      (rightAnkle?.visibility ?? 0) >= 0.40;
+      (rightHip?.visibility ?? 0) >= 0.40 &&
+      (rightKnee?.visibility ?? 0) >= 0.40 &&
+      ((rightAnkle?.visibility ?? 0) >= 0.25 || (rightHip && rightKnee));
 
     if (!leftLegVisible && !rightLegVisible) {
       this.state.currentState = 'NOT_IN_FRAME';
@@ -107,19 +107,19 @@ export class SquatAnalyzer extends BaseAnalyzer {
     // State Machine Transitions
     switch (this.state.currentState) {
       case 'NOT_IN_FRAME':
-        if (avgKneeAngle >= 155) {
+        if (avgKneeAngle >= 145) {
           this.state.currentState = 'READY';
         }
         break;
 
       case 'READY':
         // Athlete is standing tall
-        if (avgKneeAngle >= 155) {
+        if (avgKneeAngle >= 145) {
           activeJointColors[PoseLandmark.LEFT_KNEE] = '#34C759';
           activeJointColors[PoseLandmark.RIGHT_KNEE] = '#34C759';
         }
-        // Descent starts when knee bends below 140
-        if (avgKneeAngle < 140) {
+        // Descent starts when knee bends below 135
+        if (avgKneeAngle < 135) {
           this.state.currentState = 'ECCENTRIC';
           this.repStartTimeMs = timestampMs;
           this.hasReachedValidDepth = false;

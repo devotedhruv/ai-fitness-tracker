@@ -58,13 +58,14 @@ export default function ProgressScreen() {
     const runs = runsQuery.data || [];
     const records = recordsQuery.data || [];
 
+    const currentStreak = sessions.length > 0 ? Math.min(sessions.length, 5) : 0;
     recomputeProgress({
       sessions,
       runs,
       records,
-      streakDays: 4, // default 4-day consistent weekly streak
+      streakDays: currentStreak,
     });
-  }, [sessionsQuery.data, runsQuery.data, recordsQuery.data]);
+  }, [sessionsQuery.data, runsQuery.data, recordsQuery.data, recomputeProgress]);
 
   const handleOpenExerciseDetail = (exercise: ExerciseProgressItem) => {
     setSelectedExercise(exercise);

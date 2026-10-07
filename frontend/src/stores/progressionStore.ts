@@ -20,6 +20,7 @@ interface ProgressionState {
   awardSetXP: (params: SetXPParams & { exerciseName: string; primaryMuscle?: string }) => void;
   awardWorkoutXP: (xp: number) => void;
   clearPendingLevelUp: () => void;
+  resetProgress: () => void;
   setSelectedExerciseForDetail: (exerciseName: string | null) => void;
   setSelectedMuscleForDetail: (muscleGroup: string | null) => void;
 }
@@ -144,6 +145,13 @@ export const useProgressionStore = create<ProgressionState>()(
       },
 
       clearPendingLevelUp: () => set({ pendingLevelUp: null }),
+      resetProgress: () =>
+        set({
+          progress: buildUnifiedProgress({ sessions: [] }),
+          pendingLevelUp: null,
+          selectedExerciseForDetail: null,
+          selectedMuscleForDetail: null,
+        }),
       setSelectedExerciseForDetail: (name) => set({ selectedExerciseForDetail: name }),
       setSelectedMuscleForDetail: (muscle) => set({ selectedMuscleForDetail: muscle }),
     }),

@@ -53,188 +53,79 @@ interface RoutineState {
   toggleFavoriteExercise: (exerciseName: string) => void;
   recordExerciseUsage: (exerciseName: string) => void;
   startRoutineWorkout: (routine: CustomRoutine) => void;
+  resetRoutines: () => void;
 }
 
-const INITIAL_ROUTINES: CustomRoutine[] = [
-  {
-    id: 'routine-sample-leg-day',
-    name: 'Custom Leg Day',
-    category: 'Leg Day',
-    description: 'Squat and posterior chain hypertrophy with high-volume quad and calf loading.',
-    estimatedDurationMinutes: 45,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    exercises: [
-      {
-        exerciseId: 'sample-squat',
-        name: 'Barbell Squat',
-        primaryMuscle: 'LEGS',
-        order_index: 1,
-        targetSets: 4,
-        targetReps: 10,
-        targetRestSec: 120,
-        targetWeight: 80,
-      },
-      {
-        exerciseId: 'sample-leg-press',
-        name: 'Leg Press',
-        primaryMuscle: 'LEGS',
-        order_index: 2,
-        targetSets: 3,
-        targetReps: 12,
-        targetRestSec: 90,
-        targetWeight: 140,
-      },
-      {
-        exerciseId: 'sample-rdl',
-        name: 'Romanian Deadlift',
-        primaryMuscle: 'LEGS',
-        order_index: 3,
-        targetSets: 3,
-        targetReps: 10,
-        targetRestSec: 90,
-        targetWeight: 70,
-      },
-      {
-        exerciseId: 'sample-lunges',
-        name: 'Walking Lunges',
-        primaryMuscle: 'LEGS',
-        order_index: 4,
-        targetSets: 3,
-        targetReps: 12,
-        targetRestSec: 75,
-        targetWeight: 16,
-      },
-      {
-        exerciseId: 'sample-calves',
-        name: 'Standing Calf Raises',
-        primaryMuscle: 'LEGS',
-        order_index: 5,
-        targetSets: 4,
-        targetReps: 15,
-        targetRestSec: 60,
-        targetWeight: 45,
-      },
-    ],
-  },
-  {
-    id: 'routine-sample-chest-day',
-    name: 'Chest & Upper Pectoral',
-    category: 'Chest',
-    description: 'Flat compound press paired with incline dumbbells, cable adduction, and push-ups.',
-    estimatedDurationMinutes: 40,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    exercises: [
-      {
-        exerciseId: 'sample-bench',
-        name: 'Barbell Bench Press',
-        primaryMuscle: 'CHEST',
-        order_index: 1,
-        targetSets: 4,
-        targetReps: 8,
-        targetRestSec: 120,
-        targetWeight: 75,
-      },
-      {
-        exerciseId: 'sample-incline',
-        name: 'Incline Dumbbell Press',
-        primaryMuscle: 'CHEST',
-        order_index: 2,
-        targetSets: 3,
-        targetReps: 10,
-        targetRestSec: 90,
-        targetWeight: 24,
-      },
-      {
-        exerciseId: 'sample-fly',
-        name: 'Cable Chest Fly',
-        primaryMuscle: 'CHEST',
-        order_index: 3,
-        targetSets: 3,
-        targetReps: 12,
-        targetRestSec: 60,
-        targetWeight: 12,
-      },
-      {
-        exerciseId: 'sample-pushup',
-        name: 'Standard Push-up',
-        primaryMuscle: 'CHEST',
-        order_index: 4,
-        targetSets: 3,
-        targetReps: 15,
-        targetRestSec: 60,
-        targetWeight: 0,
-      },
-    ],
-  },
-];
+const INITIAL_ROUTINES: CustomRoutine[] = [];
 
 export const useRoutineStore = create<RoutineState>()(
   persist(
     (set, get) => ({
-  routines: INITIAL_ROUTINES,
-  favoriteExerciseNames: ['Barbell Bench Press', 'Barbell Squat', 'Pull-Up', 'Incline Dumbbell Press'],
-  recentExerciseNames: ['Barbell Squat', 'Barbell Bench Press', 'Pull-Up', 'Romanian Deadlift'],
-  exerciseUsageFrequency: {
-    'Barbell Bench Press': 8,
-    'Incline Dumbbell Press': 5,
-    'Cable Chest Fly': 4,
-    'Barbell Squat': 7,
-    'Pull-Up': 6,
-  },
-  isLoading: false,
-  error: null,
+      routines: INITIAL_ROUTINES,
+      favoriteExerciseNames: [],
+      recentExerciseNames: [],
+      exerciseUsageFrequency: {},
+      isLoading: false,
+      error: null,
 
-  loadRoutines: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const serverRoutines = await workoutsApi.listRoutines();
-      if (Array.isArray(serverRoutines) && serverRoutines.length > 0) {
-        const formatted: CustomRoutine[] = serverRoutines.map((r: any) => ({
-          id: r.id,
-          name: r.name,
-          category: (r.category || 'Custom Routine') as RoutineCategory,
-          description: r.description || '',
-          is_public: r.is_public ?? false,
-          estimatedDurationMinutes: calculateEstimatedDurationMinutes(
-            r.exercises?.map((re: any) => ({
-              targetSets: re.targetSets ?? 3,
-              targetReps: re.targetReps ?? 10,
-              targetRestSec: re.targetRestSec ?? 90,
-              targetDuration: re.targetDuration ?? 0,
-            })) || []
-          ),
-          exercises: (r.exercises || []).map((re: any, idx: number) => ({
-            id: re.id,
-            exerciseId: re.exerciseId || re.exercise?.id || `ex-${idx}`,
-            name: re.exercise?.name || re.name || 'Exercise',
-            primaryMuscle: re.exercise?.primaryMuscle || re.primaryMuscle || 'FULL_BODY',
-            order_index: re.order_index ?? idx + 1,
-            targetSets: re.targetSets ?? 3,
-            targetReps: re.targetReps ?? 10,
-            targetRestSec: re.targetRestSec ?? 90,
-            targetDuration: re.targetDuration ?? 0,
-            targetWeight: re.targetWeight ?? 0,
-            supersetGroupId: re.supersetGroupId || null,
-            notes: re.notes || '',
-            equipment: re.exercise?.equipment || [],
-            difficulty: re.exercise?.difficulty || 'Intermediate',
-          })),
-          createdAt: r.createdAt || new Date().toISOString(),
-          updatedAt: r.updatedAt || new Date().toISOString(),
-        }));
-        set({ routines: formatted, isLoading: false });
-      } else {
-        set({ isLoading: false });
-      }
-    } catch {
-      // Fallback to local routines if not authenticated or offline
-      set({ isLoading: false });
-    }
-  },
+      resetRoutines: () => {
+        set({
+          routines: [],
+          favoriteExerciseNames: [],
+          recentExerciseNames: [],
+          exerciseUsageFrequency: {},
+          error: null,
+        });
+      },
 
-  saveRoutine: async (draft) => {
+      loadRoutines: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const serverRoutines = await workoutsApi.listRoutines();
+          if (Array.isArray(serverRoutines)) {
+            const formatted: CustomRoutine[] = serverRoutines.map((r: any, idx: number) => ({
+              id: r.id,
+              name: r.name,
+              category: (r.category || 'Custom Routine') as RoutineCategory,
+              description: r.description || '',
+              is_public: r.is_public ?? false,
+              estimatedDurationMinutes: calculateEstimatedDurationMinutes(
+                r.exercises?.map((re: any) => ({
+                  targetSets: re.targetSets ?? 3,
+                  targetReps: re.targetReps ?? 10,
+                  targetRestSec: re.targetRestSec ?? 90,
+                  targetDuration: re.targetDuration ?? 0,
+                })) || []
+              ),
+              exercises: (r.exercises || []).map((re: any, exIdx: number) => ({
+                id: re.id,
+                exerciseId: re.exerciseId || re.exercise?.id || `ex-${exIdx}`,
+                name: re.exercise?.name || re.name || 'Exercise',
+                primaryMuscle: re.exercise?.primaryMuscle || re.primaryMuscle || 'FULL_BODY',
+                order_index: re.order_index ?? exIdx + 1,
+                targetSets: re.targetSets ?? 3,
+                targetReps: re.targetReps ?? 10,
+                targetRestSec: re.targetRestSec ?? 90,
+                targetDuration: re.targetDuration ?? 0,
+                targetWeight: re.targetWeight ?? 0,
+                supersetGroupId: re.supersetGroupId || null,
+                notes: re.notes || '',
+                equipment: re.exercise?.equipment || [],
+                difficulty: re.exercise?.difficulty || 'Intermediate',
+              })),
+              createdAt: r.createdAt || new Date().toISOString(),
+              updatedAt: r.updatedAt || new Date().toISOString(),
+            }));
+            set({ routines: formatted, isLoading: false });
+          } else {
+            set({ isLoading: false });
+          }
+        } catch {
+          set({ isLoading: false });
+        }
+      },
+
+      saveRoutine: async (draft) => {
     const isEdit = !!draft.id;
     const routineId = draft.id || `routine-${Date.now()}`;
     const estimatedMinutes = calculateEstimatedDurationMinutes(draft.exercises);

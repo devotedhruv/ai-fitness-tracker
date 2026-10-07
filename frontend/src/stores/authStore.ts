@@ -31,18 +31,21 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
+import { useProgressionStore } from './progressionStore';
+import { useRoutineStore } from './routineStore';
+
 export const DEFAULT_USER: User = {
-  id: 'user-demo-athlete',
+  id: 'user-athlete',
   email: 'athlete@aifitnesstracker.app',
   profile: {
-    displayName: 'AI Fitness Athlete',
-    username: 'athlete',
-    avatarUrl: 'preset:athlete',
-    bio: 'Build. Move. Become.',
+    displayName: 'Athlete',
+    username: '',
+    avatarUrl: '',
+    bio: '',
     units: 'METRIC',
-    experienceLevel: 'INTERMEDIATE',
-    daysPerWeek: 4,
-    equipment: ['Dumbbells', 'Barbell'],
+    experienceLevel: 'BEGINNER',
+    daysPerWeek: 3,
+    equipment: [],
   },
 };
 
@@ -66,13 +69,21 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isOnboarded: false,
 
-      setSession: (user, tokens) =>
+      setSession: (user, tokens) => {
+        // Reset stores to ensure newly registered or logged in accounts start fresh
+        try {
+          useProgressionStore.getState().resetProgress();
+          useRoutineStore.getState().resetRoutines();
+        } catch {
+          // ignore
+        }
         set({
           user,
           tokens,
           isAuthenticated: true,
           isOnboarded: true,
-        }),
+        });
+      },
 
       setTokens: (tokens) => set({ tokens }),
 
@@ -94,13 +105,20 @@ export const useAuthStore = create<AuthState>()(
 
       setOnboarded: (isOnboarded) => set({ isOnboarded }),
 
-      logout: () =>
+      logout: () => {
+        try {
+          useProgressionStore.getState().resetProgress();
+          useRoutineStore.getState().resetRoutines();
+        } catch {
+          // ignore
+        }
         set({
           user: null,
           tokens: null,
           isAuthenticated: false,
           isOnboarded: false,
-        }),
+        });
+      },
     }),
     {
       name: 'balyra-auth-store',

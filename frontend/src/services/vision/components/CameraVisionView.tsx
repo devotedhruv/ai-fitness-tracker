@@ -57,7 +57,8 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
     }
 
     let stream: MediaStream | null = null;
-    let cameraInstance: any = null;
+    let poseInstance: any = null;
+    let animFrameId: number | null = null;
     let isCancelled = false;
 
     async function setupVisionPipeline() {
@@ -65,73 +66,118 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
         setIsLoading(true);
         setCameraError(null);
 
-        // 1. Request webcam stream
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
+        // 1. Wait for video element ref to be mounted if needed
+        let retries = 0;
+        while (!videoRef.current && retries < 20 && !isCancelled) {
+          await new Promise((r) => setTimeout(r, 50));
+          retries++;
+        }
+        if (!videoRef.current || isCancelled) return;
+
+        // 2. Request webcam stream with fallback
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Webcam API is not supported in this browser or requires an HTTPS / localhost connection.');
+        }
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode,
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+        } catch (mediaErr) {
+          console.warn('High-res camera constraints failed, attempting fallback to default video:', mediaErr);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
 
         if (isCancelled) return;
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.srcObject = stream;
+        video.muted = true;
+        video.setAttribute('muted', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.playsInline = true;
+
+        // Wait for video data to be ready
+        await new Promise<void>((resolve) => {
+          if (video.readyState >= 2) {
+            resolve();
+          } else {
+            video.onloadeddata = () => resolve();
+            setTimeout(resolve, 1500);
+          }
+        });
+
+        try {
+          await video.play();
+        } catch (playErr) {
+          console.warn('Video play deferred or waiting for user interaction:', playErr);
         }
 
-        // 2. Dynamically load MediaPipe Pose scripts if not present
+        if (isCancelled) return;
+
+        // 3. Dynamically load MediaPipe Pose script if not present
         if (!(window as any).Pose) {
-          await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
-          await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js');
+          await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js');
         }
 
         if (isCancelled) return;
 
         const PoseConstructor = (window as any).Pose;
-        const CameraConstructor = (window as any).Camera;
-
-        if (!PoseConstructor || !CameraConstructor) {
-          throw new Error('MediaPipe Pose library could not be loaded.');
+        if (!PoseConstructor) {
+          throw new Error('MediaPipe Pose library could not be loaded from CDN.');
         }
 
-        // 3. Initialize Pose model
+        // 4. Initialize Pose model
         const pose = new PoseConstructor({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`,
         });
+        poseInstance = pose;
 
         pose.setOptions({
-          modelComplexity: 1, // 0 = Lite (fastest), 1 = Full (accurate & real-time), 2 = Heavy
+          modelComplexity: 1, // 0 = Lite, 1 = Full (real-time & accurate), 2 = Heavy
           smoothLandmarks: true,
           enableSegmentation: false,
           smoothSegmentation: false,
-          minDetectionConfidence: 0.55,
-          minTrackingConfidence: 0.55,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
         });
 
-        // 4. Handle results on each frame
+        // 5. Handle results on each frame
         pose.onResults((results: any) => {
           if (isCancelled) return;
 
+          setIsLoading(false);
+
           const canvas = canvasRef.current;
-          const video = videoRef.current;
-          if (!canvas || !video) return;
+          const currentVideo = videoRef.current;
+          if (!canvas || !currentVideo) return;
 
           const ctx = canvas.getContext('2d');
           if (!ctx) return;
 
-          // Resize canvas to match video stream
-          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+          const vidW = currentVideo.videoWidth || currentVideo.clientWidth || 640;
+          const vidH = currentVideo.videoHeight || currentVideo.clientHeight || 480;
+
+          // Resize canvas to match video stream dimensions
+          if (canvas.width !== vidW || canvas.height !== vidH) {
+            canvas.width = vidW;
+            canvas.height = vidH;
           }
 
           // Clear canvas
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-          if (results.poseLandmarks) {
+          if (results.poseLandmarks && results.poseLandmarks.length > 0) {
             const rawLandmarks: Landmark3D[] = results.poseLandmarks.map((lm: any) => ({
               x: lm.x,
               y: lm.y,
@@ -142,25 +188,37 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
             // Pass to biomechanics analyzer
             const analysis = poseTracker.onNewFrame(rawLandmarks);
 
-            // Draw clean overlay without lines
+            // Draw overlay without distracting lines
             drawSkeleton(ctx, canvas.width, canvas.height, rawLandmarks, analysis, showJointDotsRef.current);
           }
         });
 
-        // 5. Connect video stream to MediaPipe Camera loop
-        if (videoRef.current) {
-          cameraInstance = new CameraConstructor(videoRef.current, {
-            onFrame: async () => {
-              if (videoRef.current && !isCancelled) {
-                await pose.send({ image: videoRef.current });
-              }
-            },
-            width: 1280,
-            height: 720,
-          });
-          cameraInstance.start();
-        }
+        // 6. Connect video stream to rAF processing loop
+        let isProcessing = false;
+        const processFrame = async () => {
+          if (isCancelled) return;
 
+          const currentVideo = videoRef.current;
+          if (
+            currentVideo &&
+            !currentVideo.paused &&
+            currentVideo.readyState >= 2 &&
+            !isProcessing
+          ) {
+            isProcessing = true;
+            try {
+              await pose.send({ image: currentVideo });
+            } catch (err) {
+              console.warn('Pose send frame warning:', err);
+            } finally {
+              isProcessing = false;
+            }
+          }
+
+          animFrameId = requestAnimationFrame(processFrame);
+        };
+
+        animFrameId = requestAnimationFrame(processFrame);
         setIsLoading(false);
       } catch (err: any) {
         console.error('Failed to initialize camera vision pipeline:', err);
@@ -173,8 +231,15 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
 
     return () => {
       isCancelled = true;
-      if (cameraInstance && cameraInstance.stop) {
-        cameraInstance.stop();
+      if (animFrameId !== null) {
+        cancelAnimationFrame(animFrameId);
+      }
+      try {
+        if (poseInstance && typeof poseInstance.close === 'function') {
+          poseInstance.close();
+        }
+      } catch {
+        // ignore
       }
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
@@ -269,6 +334,16 @@ export const CameraVisionView: React.FC<CameraVisionViewProps> = ({
           <Text style={styles.errorTitle}>Camera Error</Text>
           <Text style={styles.errorMessage}>{cameraError}</Text>
           <Text style={styles.errorHint}>Please ensure camera access is allowed in your browser settings.</Text>
+          <TouchableOpacity
+            style={[styles.finishButton, { marginTop: 16, paddingHorizontal: 24 }]}
+            onPress={() => {
+              setCameraError(null);
+              setIsLoading(true);
+              setFacingMode((prev) => (prev === 'user' ? 'user' : 'environment'));
+            }}
+          >
+            <Text style={styles.finishButtonText}>RETRY CAMERA</Text>
+          </TouchableOpacity>
         </View>
       )}
 

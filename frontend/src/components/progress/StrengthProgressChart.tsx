@@ -113,6 +113,37 @@ export function StrengthProgressChart({
 
   const rankBadge = getRankBadgeColors(currentExercise.rank);
 
+  if (exercises.length === 0 || !currentExercise) {
+    return (
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.surfaceElevated,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              Strength Progression
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+              Over-time overload & 1RM trend
+            </Text>
+          </View>
+        </View>
+        <View style={{ paddingVertical: 24, paddingHorizontal: 16, alignItems: 'center' }}>
+          <Icon name="progress" size={32} color={colors.textSecondary} />
+          <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
+            No exercise history yet. Log your first workout to track 1RM and volume overload!
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View
       style={[

@@ -160,8 +160,8 @@ export function buildUnifiedProgress(params: {
     streaksWeeks: Math.floor(streakDays / 7),
   });
 
-  // Base starting XP for demo athlete if empty so app immediately feels populated
-  const totalXP = Math.max(historyXP.totalXP, sessions.length > 0 ? historyXP.totalXP : 7850);
+  // Total earned XP from real workouts, PRs, runs, and streaks
+  const totalXP = historyXP.totalXP;
   const levelInfo = calculateLevelFromXP(totalXP);
 
   // 2. Aggregate per-exercise training stats & XP
@@ -275,65 +275,6 @@ export function buildUnifiedProgress(params: {
     totalVolumeKg += Math.max(sessionSetsVolume, Number(session.totalVolumeKg || 0));
   });
 
-  // Ensure standard exercises exist in demo state if user has fewer sessions
-  const standardExercises = [
-    { id: 'squat', name: 'Barbell Squat', muscle: 'Legs', xp: 2650, pb: 140, reps: 5, vol: 6200, sets: 28 },
-    { id: 'bench-press', name: 'Barbell Bench Press', muscle: 'Chest', xp: 1840, pb: 100, reps: 8, vol: 5400, sets: 24 },
-    { id: 'deadlift', name: 'Barbell Deadlift', muscle: 'Back', xp: 2820, pb: 170, reps: 5, vol: 7100, sets: 22 },
-    { id: 'overhead-press', name: 'Overhead Press', muscle: 'Shoulders', xp: 1120, pb: 65, reps: 6, vol: 2300, sets: 18 },
-    { id: 'barbell-curl', name: 'Barbell Curl', muscle: 'Arms', xp: 890, pb: 45, reps: 10, vol: 1800, sets: 16 },
-    { id: 'pull-up', name: 'Pull-Up', muscle: 'Back', xp: 1520, pb: 0, reps: 15, vol: 2200, sets: 20 },
-    { id: 'lever-pec-deck-fly', name: 'Lever Pec Deck Fly', muscle: 'Chest', xp: 1240, pb: 75, reps: 12, vol: 3100, sets: 18 },
-  ];
-
-  standardExercises.forEach((std) => {
-    if (!exerciseMap[std.id] && !exerciseMap[std.name]) {
-      const e1rm = estimate1RM(std.pb, std.reps);
-      const exItem: ExerciseProgressItem = {
-        exerciseId: std.id,
-        exerciseName: std.name,
-        primaryMuscle: std.muscle,
-        rank: getExerciseRankByXP(std.xp).rank,
-        level: Math.max(1, Math.floor(std.xp / 400)),
-        currentXP: std.xp,
-        nextRankXP: getExerciseRankByXP(std.xp).nextRank ? (std.xp + getExerciseRankByXP(std.xp).xpRequired) : std.xp + 500,
-        progressPercentage: getExerciseRankByXP(std.xp).progressPercentage,
-        totalSets: std.sets,
-        totalReps: std.sets * std.reps,
-        totalVolumeKg: std.vol,
-        personalBestWeightKg: std.pb,
-        personalBestReps: std.reps,
-        estimated1RMKg: e1rm,
-        historyPoints: [
-          { date: '2026-09-12', weightKg: std.pb - 15, reps: std.reps, volumeKg: (std.pb - 15) * std.reps * 3, estimated1RMKg: estimate1RM(std.pb - 15, std.reps) },
-          { date: '2026-09-20', weightKg: std.pb - 10, reps: std.reps, volumeKg: (std.pb - 10) * std.reps * 3, estimated1RMKg: estimate1RM(std.pb - 10, std.reps) },
-          { date: '2026-09-28', weightKg: std.pb - 5, reps: std.reps, volumeKg: (std.pb - 5) * std.reps * 3, estimated1RMKg: estimate1RM(std.pb - 5, std.reps) },
-          { date: '2026-10-03', weightKg: std.pb, reps: std.reps, volumeKg: std.pb * std.reps * 3, estimated1RMKg: e1rm },
-        ],
-        nextMilestone: {
-          targetDescription: `Reach ${std.pb + 5} kg × ${std.reps} reps`,
-          rewardXP: 200,
-          metricType: 'WEIGHT',
-          currentVal: std.pb,
-          targetVal: std.pb + 5,
-        },
-      };
-      exerciseMap[std.id] = exItem;
-      exerciseMap[std.name] = exItem;
-
-      // Add to muscle accumulator if initial preview
-      if (sessions.length === 0) {
-        const m = std.muscle;
-        if (muscleAccumulator[m]) {
-          muscleAccumulator[m].xp += std.xp;
-          muscleAccumulator[m].volumeKg += std.vol;
-          muscleAccumulator[m].sets += std.sets;
-          muscleAccumulator[m].exercises.add(std.name);
-        }
-      }
-    }
-  });
-
   // Calculate final ranks for all exercises
   Object.values(exerciseMap).forEach((item) => {
     const rankRes = getExerciseRankByXP(item.currentXP);
@@ -355,14 +296,9 @@ export function buildUnifiedProgress(params: {
 
   muscleGroups.forEach((m) => {
     const data = muscleAccumulator[m];
-    // Baseline demo values only if no sessions recorded
-    const hasLiveSessions = sessions.length > 0;
-    const defaultXp = m === 'Chest' ? 3200 : m === 'Back' ? 4800 : m === 'Legs' ? 4900 : m === 'Shoulders' ? 2200 : m === 'Arms' ? 2100 : 1400;
-    const defaultSets = m === 'Chest' ? 42 : m === 'Back' ? 46 : m === 'Legs' ? 38 : m === 'Shoulders' ? 24 : m === 'Arms' ? 22 : 16;
-
-    const xp = hasLiveSessions ? data.xp : defaultXp;
-    const sets = hasLiveSessions ? data.sets : defaultSets;
-    const vol = hasLiveSessions ? data.volumeKg : Math.max(data.volumeKg, sets * 180);
+    const xp = data.xp;
+    const sets = data.sets;
+    const vol = data.volumeKg;
 
     const rankInfo = getMuscleRankByXP(xp);
     muscleProgress[m] = {
@@ -378,22 +314,22 @@ export function buildUnifiedProgress(params: {
   });
 
   // 4. Determine Top Ranks
-  let topExName = 'Barbell Squat';
-  let topExRank: ExerciseRankTier = 'S';
+  let topExName = 'None';
+  let topExRank: ExerciseRankTier = 'D';
   let maxExXP = -1;
   Object.values(exerciseMap).forEach((ex) => {
-    if (ex.currentXP > maxExXP) {
+    if (ex.currentXP > maxExXP && ex.currentXP > 0) {
       maxExXP = ex.currentXP;
       topExName = ex.exerciseName;
       topExRank = ex.rank;
     }
   });
 
-  let topMuscle = 'Legs';
-  let topMuscleRank: MuscleRankTier = 'S';
+  let topMuscle = 'None';
+  let topMuscleRank: MuscleRankTier = 'D';
   let maxMuscleXP = -1;
   Object.values(muscleProgress).forEach((mp) => {
-    if (mp.currentXP > maxMuscleXP) {
+    if (mp.currentXP > maxMuscleXP && mp.currentXP > 0) {
       maxMuscleXP = mp.currentXP;
       topMuscle = mp.muscleGroup;
       topMuscleRank = mp.rank;
@@ -401,47 +337,55 @@ export function buildUnifiedProgress(params: {
   });
 
   // 5. Weekly Comparison Dashboard
-  const weeklyDashboard = calculateWeeklyDashboard(sessions, records);
+  const weeklyDashboard = calculateWeeklyDashboard(sessions, records, runs);
 
-  // 6. Recent Achievements (custom vector icon keys only, no emojis)
-  const recentAchievements: AchievementItem[] = [
-    {
-      id: 'ach-1',
-      title: 'New Bench Press PR',
-      description: 'Logged 100 kg × 8 reps milestone',
+  // 6. Real Achievements (dynamically awarded based on actual achievements)
+  const recentAchievements: AchievementItem[] = [];
+  if (records.length > 0) {
+    const topPR = records[0];
+    recentAchievements.push({
+      id: 'ach-pr',
+      title: `New ${topPR.exerciseName} PR`,
+      description: `Logged ${topPR.value} milestone`,
       icon: 'trophy',
       xpAwarded: 150,
-      unlockedAt: '2 days ago',
+      unlockedAt: 'Recently',
       category: 'PR',
-    },
-    {
-      id: 'ach-2',
-      title: '7-Day Workout Streak',
-      description: 'Sustained perfect consistency across all scheduled sessions',
+    });
+  }
+  if (sessions.length >= 7) {
+    recentAchievements.push({
+      id: 'ach-streak',
+      title: '7-Session Dedication',
+      description: 'Logged 7+ completed training sessions',
       icon: 'flame',
       xpAwarded: 100,
-      unlockedAt: 'Yesterday',
+      unlockedAt: 'Recently',
       category: 'STREAK',
-    },
-    {
-      id: 'ach-3',
+    });
+  }
+  if (levelInfo.level > 1) {
+    recentAchievements.push({
+      id: 'ach-level',
       title: `Level ${levelInfo.level} Reached`,
       description: `Attained the title of ${levelInfo.title}`,
       icon: 'medal',
       xpAwarded: 250,
-      unlockedAt: '3 days ago',
+      unlockedAt: 'Recently',
       category: 'LEVEL',
-    },
-    {
-      id: 'ach-4',
+    });
+  }
+  if (totalVolumeKg >= 10000) {
+    recentAchievements.push({
+      id: 'ach-vol',
       title: '10,000 kg Volume Club',
-      description: 'Pushed past monumental weekly tonnage',
+      description: 'Pushed past monumental tonnage',
       icon: 'dumbbell',
       xpAwarded: 200,
-      unlockedAt: '1 week ago',
+      unlockedAt: 'Recently',
       category: 'VOLUME',
-    },
-  ];
+    });
+  }
 
   return {
     level: levelInfo.level,
@@ -451,17 +395,13 @@ export function buildUnifiedProgress(params: {
     nextLevelXP: levelInfo.xpForNextLevel,
     xpToNextLevel: levelInfo.xpToNextLevel,
     progressPercentage: levelInfo.progressPercentage,
-    streakDays: streakDays !== undefined && streakDays > 0 ? streakDays : (sessions.length > 0 ? 5 : 4),
-    totalWorkouts: sessions.length > 0 ? sessions.length : 14,
-    totalSets: sessions.length > 0 ? totalSetsCount : 86,
-    totalVolumeKg: sessions.length > 0 ? totalVolumeKg : 14850,
+    streakDays: streakDays !== undefined && streakDays >= 0 ? streakDays : (sessions.length > 0 ? 1 : 0),
+    totalWorkouts: sessions.length,
+    totalSets: totalSetsCount,
+    totalVolumeKg: Math.round(totalVolumeKg),
     topExerciseRank: { name: topExName, rank: topExRank },
     topMuscleRank: { muscle: topMuscle, rank: topMuscleRank },
-    personalRecords: records.length > 0 ? records : [
-      { exerciseName: 'Barbell Bench Press', value: 100, type: 'MAX_WEIGHT', achievedAt: '2026-10-02' },
-      { exerciseName: 'Barbell Squat', value: 140, type: 'MAX_WEIGHT', achievedAt: '2026-09-28' },
-      { exerciseName: 'Barbell Deadlift', value: 170, type: 'MAX_WEIGHT', achievedAt: '2026-09-25' },
-    ],
+    personalRecords: records,
     exerciseProgress: exerciseMap,
     muscleProgress,
     recentAchievements,
@@ -473,7 +413,7 @@ export function buildUnifiedProgress(params: {
 /**
  * Calculates This Week vs Last Week KPI comparison
  */
-function calculateWeeklyDashboard(sessions: any[], records: any[]): WeeklyProgressDashboard {
+function calculateWeeklyDashboard(sessions: any[], records: any[], runs: any[] = []): WeeklyProgressDashboard {
   const now = new Date();
   const dayOfWeek = (now.getDay() + 6) % 7;
   const startOfThisWeek = new Date(now);
@@ -514,25 +454,25 @@ function calculateWeeklyDashboard(sessions: any[], records: any[]): WeeklyProgre
     }
   });
 
-  const hasLiveActivity = sessions.length > 0;
-  const finalThisWeekWorkouts = hasLiveActivity ? thisWeekWorkouts : 4;
-  const finalLastWeekWorkouts = hasLiveActivity ? lastWeekWorkouts : 3;
-  const finalThisWeekVol = hasLiveActivity ? thisWeekVolume : 12480;
-  const finalLastWeekVol = hasLiveActivity ? lastWeekVolume : 11140;
-  const finalThisWeekSets = hasLiveActivity ? thisWeekSets : 86;
-  const finalLastWeekSets = hasLiveActivity ? lastWeekSets : 74;
-  const finalThisWeekPRs = hasLiveActivity ? records.length : 3;
-  const finalLastWeekPRs = hasLiveActivity ? 0 : 1;
+  const hasLiveActivity = sessions.length > 0 || runs.length > 0;
+  const finalThisWeekWorkouts = thisWeekWorkouts;
+  const finalLastWeekWorkouts = lastWeekWorkouts;
+  const finalThisWeekVol = thisWeekVolume;
+  const finalLastWeekVol = lastWeekVolume;
+  const finalThisWeekSets = thisWeekSets;
+  const finalLastWeekSets = lastWeekSets;
+  const finalThisWeekPRs = records.length;
+  const finalLastWeekPRs = 0;
 
   const volDelta = finalLastWeekVol > 0
     ? Math.round(((finalThisWeekVol - finalLastWeekVol) / finalLastWeekVol) * 100)
-    : (finalThisWeekVol > 0 ? 100 : (hasLiveActivity ? 0 : 12));
+    : (finalThisWeekVol > 0 ? 100 : 0);
 
   return {
     workouts: finalThisWeekWorkouts,
     volumeKg: finalThisWeekVol,
     sets: finalThisWeekSets,
-    exercisesCount: Math.max(thisWeekExercises.size, hasLiveActivity ? 1 : 24),
+    exercisesCount: thisWeekExercises.size,
     prsCount: finalThisWeekPRs,
     lastWeekWorkouts: finalLastWeekWorkouts,
     lastWeekVolumeKg: finalLastWeekVol,
@@ -552,7 +492,6 @@ export function buildActivityMatrix(
   runs: any[] = []
 ): Record<string, DayActivityRecord> {
   const matrix: Record<string, DayActivityRecord> = {};
-  const today = new Date();
 
   // Populate from completed workout sessions
   sessions.forEach((s) => {
@@ -609,69 +548,6 @@ export function buildActivityMatrix(
       meta: r.distanceMeters ? `${(r.distanceMeters / 1000).toFixed(2)} km` : undefined,
     });
   });
-
-  // If user has fresh/empty session history, provide a 52-week (full year) baseline consistency matrix
-  if (Object.keys(matrix).length === 0) {
-    for (let daysAgo = 365; daysAgo >= 0; daysAgo--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - daysAgo);
-      const dateKey = d.toISOString().slice(0, 10);
-      const dayOfWeek = (d.getDay() + 6) % 7; // 0 = Mon, ..., 6 = Sun
-
-      if (dayOfWeek === 2 || dayOfWeek === 6) {
-        // Wednesday & Sunday: Planned Rest & Recovery (Orange)
-        matrix[dateKey] = {
-          date: dateKey,
-          xp: 0,
-          isRestDay: true,
-        };
-      } else if (dayOfWeek === 0 || dayOfWeek === 3) {
-        // Heavy/Hard Workout (100–149 XP)
-        const xp = 110 + ((daysAgo * 7) % 35);
-        matrix[dateKey] = {
-          date: dateKey,
-          xp,
-          isRestDay: false,
-          activities: [
-            {
-              type: 'strength',
-              title: dayOfWeek === 0 ? 'Upper Body Heavy' : 'Legs & Core Power',
-              xp: xp - 25,
-              meta: '5,800 kg volume',
-            },
-            { type: 'daily_goal', title: 'Daily Volume Target', xp: 25 },
-          ],
-        };
-      } else if (dayOfWeek === 1 || dayOfWeek === 5) {
-        // Elite (150+ XP) or Moderate (50–99 XP)
-        const isElite = daysAgo % 4 === 0;
-        const xp = isElite ? 165 : 85;
-        matrix[dateKey] = {
-          date: dateKey,
-          xp,
-          isRestDay: false,
-          activities: [
-            {
-              type: dayOfWeek === 5 ? 'run' : 'strength',
-              title: dayOfWeek === 5 ? 'Tempo 5K Run' : 'Shoulders & Arms',
-              xp,
-              meta: dayOfWeek === 5 ? '24:18 • 4:51/km' : '3,200 kg volume',
-            },
-          ],
-        };
-      } else if (dayOfWeek === 4) {
-        // Friday light activity (1–49 XP)
-        matrix[dateKey] = {
-          date: dateKey,
-          xp: 40,
-          isRestDay: false,
-          activities: [
-            { type: 'mobility', title: 'Full Body Mobility & Core', xp: 40, meta: '20 min session' },
-          ],
-        };
-      }
-    }
-  }
 
   return matrix;
 }

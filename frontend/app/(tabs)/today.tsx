@@ -45,13 +45,21 @@ export default function TodayScreen() {
   });
 
   useEffect(() => {
-    const sessions = sessionsQuery.data || [];
-    const runs = runsQuery.data || [];
-    const records = recordsQuery.data || [];
-    if (sessions.length > 0 || runs.length > 0) {
+    if (sessionsQuery.isSuccess || runsQuery.isSuccess || recordsQuery.isSuccess) {
+      const sessions = sessionsQuery.data || [];
+      const runs = runsQuery.data || [];
+      const records = recordsQuery.data || [];
       recomputeProgress({ sessions, runs, records });
     }
-  }, [sessionsQuery.data, runsQuery.data, recordsQuery.data, recomputeProgress]);
+  }, [
+    sessionsQuery.isSuccess,
+    sessionsQuery.data,
+    runsQuery.isSuccess,
+    runsQuery.data,
+    recordsQuery.isSuccess,
+    recordsQuery.data,
+    recomputeProgress,
+  ]);
 
   const displayName = user?.profile?.displayName || 'Athlete';
   const targetDays = user?.profile?.daysPerWeek || 4;

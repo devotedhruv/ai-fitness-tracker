@@ -68,18 +68,17 @@ describe('Unified Progression System', () => {
   });
 
   describe('buildUnifiedProgress', () => {
-    it('builds coherent baseline structure when user has no logged workouts', () => {
+    it('builds clean initial state when user has no logged workouts', () => {
       const progress = buildUnifiedProgress({ sessions: [] });
 
-      expect(progress.level).toBe(24); // baseline character preview Level 24 Iron Warrior
-      expect(progress.rankTitle).toBe('Iron Warrior');
-      expect(progress.streakDays).toBe(4);
-      expect(progress.exerciseProgress['squat']).toBeDefined();
-      expect(progress.exerciseProgress['squat'].rank).toBe('S');
-      expect(progress.exerciseProgress['bench-press'].rank).toBe('A');
-      expect(progress.muscleProgress['Chest']).toBeDefined();
-      expect(progress.weeklyDashboard.volumeDeltaPercent).toBe(12);
-      expect(progress.recentAchievements.length).toBeGreaterThan(0);
+      expect(progress.level).toBe(1);
+      expect(progress.rankTitle).toBe('Recruit');
+      expect(progress.streakDays).toBe(0);
+      expect(progress.totalWorkouts).toBe(0);
+      expect(progress.totalVolumeKg).toBe(0);
+      expect(progress.topExerciseRank.name).toBe('None');
+      expect(progress.topMuscleRank.muscle).toBe('None');
+      expect(progress.recentAchievements.length).toBe(0);
     });
 
     it('aggregates live sessions into exercise and muscle progression', () => {
@@ -206,17 +205,11 @@ describe('Unified Progression System', () => {
       expect(progress.activityMatrix[todayKey].activities?.[0].type).toBe('strength');
     });
 
-    it('populates full 365-day calendar activity matrix for new users', () => {
+    it('starts with empty activity matrix for new users with no sessions', () => {
       const progress = buildUnifiedProgress({ sessions: [] });
       expect(progress.activityMatrix).toBeDefined();
       const daysCount = Object.keys(progress.activityMatrix).length;
-      expect(daysCount).toBeGreaterThanOrEqual(365);
-
-      // Verify that all 12 months are represented across the records
-      const monthsSet = new Set(
-        Object.keys(progress.activityMatrix).map((k) => k.slice(5, 7))
-      );
-      expect(monthsSet.size).toBe(12);
+      expect(daysCount).toBe(0);
     });
   });
 });

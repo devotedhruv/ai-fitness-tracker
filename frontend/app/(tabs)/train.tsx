@@ -20,7 +20,7 @@ import { Input } from '../../src/components/Input';
 import { StateView } from '../../src/components/StateView';
 import { Icon } from '../../src/components/Icon';
 import { useRouter } from 'expo-router';
-import { exercisesApi, progressionsApi } from '../../src/services/api';
+import { exercisesApi, progressionsApi, runsApi } from '../../src/services/api';
 import { ExerciseDetailModal, ExerciseItem } from '../../src/components/ExerciseDetailModal';
 import { useActiveWorkoutStore } from '../../src/stores/activeWorkoutStore';
 import { useRoutineStore, CustomRoutine } from '../../src/stores/routineStore';
@@ -83,6 +83,13 @@ export default function TrainScreen() {
     queryKey: ['progressions'],
     queryFn: () => progressionsApi.getTrees(),
     enabled: segment === 'EXERCISE',
+  });
+
+  // Completed runs query
+  const runsQuery = useQuery({
+    queryKey: ['completed-runs'],
+    queryFn: () => runsApi.listRuns(),
+    enabled: segment === 'RUN',
   });
 
   const handleDeleteRoutineConfirm = (routine: CustomRoutine) => {
@@ -179,15 +186,33 @@ export default function TrainScreen() {
             <Text style={[typography.headingSmall, { color: colors.textPrimary, marginBottom: 8 }]}>
               Recent Runs
             </Text>
-            <Card style={{ marginBottom: 10 }}>
-              <View style={styles.runRow}>
-                <View>
-                  <Text style={[typography.bodyBold, { color: colors.textPrimary }]}>Morning 5K</Text>
-                  <Text style={[typography.caption, { color: colors.textSecondary }]}>Yesterday • 5.12 km • 26:14</Text>
-                </View>
-                <Text style={[typography.bodyBold, { color: colors.accent }]}>5:07 /km</Text>
-              </View>
-            </Card>
+            {runsQuery.data && runsQuery.data.length > 0 ? (
+              runsQuery.data.slice(0, 5).map((run: any) => (
+                <Card key={run.id} style={{ marginBottom: 10 }}>
+                  <View style={styles.runRow}>
+                    <View>
+                      <Text style={[typography.bodyBold, { color: colors.textPrimary }]}>
+                        {run.title || 'Outdoor Run'}
+                      </Text>
+                      <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                        {run.startTime ? new Date(run.startTime).toLocaleDateString() : 'Recent'} • {(Number(run.distanceMeters || 0) / 1000).toFixed(2)} km • {Math.floor((run.durationSeconds || 0) / 60)}:{String((run.durationSeconds || 0) % 60).padStart(2, '0')}
+                      </Text>
+                    </View>
+                    <Text style={[typography.bodyBold, { color: colors.accent }]}>
+                      {run.pace || '-- /km'}
+                    </Text>
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <Card style={{ padding: 18, alignItems: 'center' }}>
+                <Icon name="runner" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
+                <Text style={[typography.bodyBold, { color: colors.textPrimary }]}>No Runs Logged Yet</Text>
+                <Text style={[typography.caption, { color: colors.textSecondary, textAlign: 'center', marginTop: 4 }]}>
+                  Hit Launch Run Tracker above to record your first outdoor GPS run!
+                </Text>
+              </Card>
+            )}
           </ScrollView>
         ) : (
           <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>

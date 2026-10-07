@@ -6,8 +6,8 @@ export class PushupAnalyzer extends BaseAnalyzer {
   private hasReachedValidDepth: boolean = false;
 
   constructor() {
-    // Target Inflection <= 90 deg, Target Lockout >= 160 deg
-    super('pushup', 'Push-up', 90, 160);
+    // Target Inflection <= 95 deg, Target Lockout >= 150 deg
+    super('pushup', 'Push-up', 95, 150);
   }
 
   public processFrame(landmarks: Landmark3D[], timestampMs: number): FrameAnalysisResult {
@@ -31,16 +31,16 @@ export class PushupAnalyzer extends BaseAnalyzer {
     const rightHip = landmarks[PoseLandmark.RIGHT_HIP];
     const rightAnkle = landmarks[PoseLandmark.RIGHT_ANKLE];
 
-    // Require at least one full arm to be clearly visible in camera frame
+    // Require at least one full arm to be visible in camera frame
     const leftArmVisible =
-      (leftShoulder?.visibility ?? 0) >= 0.55 &&
-      (leftElbow?.visibility ?? 0) >= 0.55 &&
-      (leftWrist?.visibility ?? 0) >= 0.50;
+      (leftShoulder?.visibility ?? 0) >= 0.40 &&
+      (leftElbow?.visibility ?? 0) >= 0.40 &&
+      (leftWrist?.visibility ?? 0) >= 0.30;
 
     const rightArmVisible =
-      (rightShoulder?.visibility ?? 0) >= 0.55 &&
-      (rightElbow?.visibility ?? 0) >= 0.55 &&
-      (rightWrist?.visibility ?? 0) >= 0.50;
+      (rightShoulder?.visibility ?? 0) >= 0.40 &&
+      (rightElbow?.visibility ?? 0) >= 0.40 &&
+      (rightWrist?.visibility ?? 0) >= 0.30;
 
     if (!leftArmVisible && !rightArmVisible) {
       this.state.currentState = 'NOT_IN_FRAME';
