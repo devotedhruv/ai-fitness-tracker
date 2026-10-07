@@ -2,7 +2,7 @@ import { useAuthStore } from '../stores/authStore';
 
 let customApiBaseUrl: string | null = null;
 
-export const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://court-advisors-freelance-mobility.trycloudflare.com/api/v1';
+export const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://ai-fitness-tracker-erqp.onrender.com/api/v1';
 
 export function getApiBaseUrl(): string {
   return customApiBaseUrl || DEFAULT_API_URL;

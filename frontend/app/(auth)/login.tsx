@@ -248,7 +248,7 @@ export default function LoginScreen() {
                   value={serverUrl}
                   onChangeText={setServerUrl}
                   autoCapitalize="none"
-                  placeholder="https://court-advisors-freelance-mobility.trycloudflare.com/api/v1"
+                  placeholder="https://ai-fitness-tracker-erqp.onrender.com/api/v1"
                 />
                 {connectionStatus && (
                   <Text style={[typography.caption, { color: colors.accent, marginVertical: 4 }]}>
